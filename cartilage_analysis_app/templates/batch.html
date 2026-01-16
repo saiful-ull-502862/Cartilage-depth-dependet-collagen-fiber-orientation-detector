@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Analysis - Cartilage Image Processing</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <style>
+        .batch-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .batch-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .batch-header h1 {
+            color: #4ecdc4;
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .batch-header p {
+            color: #a0a0a0;
+            font-size: 1rem;
+        }
+
+        .nav-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #4ecdc4;
+            text-decoration: none;
+            padding: 10px 20px;
+            border: 1px solid #4ecdc4;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .nav-link:hover {
+            background: #4ecdc4;
+            color: #1a1a2e;
+        }
+
+        .upload-section {
+            background: linear-gradient(135deg, #1e1e30 0%, #252540 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .drop-zone-batch {
+            border: 3px dashed #4ecdc4;
+            border-radius: 15px;
+            padding: 50px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(78, 205, 196, 0.05);
+        }
+
+        .drop-zone-batch:hover {
+            background: rgba(78, 205, 196, 0.15);
+            border-color: #00ff88;
+        }
+
+        .drop-zone-batch.dragover {
+            background: rgba(78, 205, 196, 0.25);
+            transform: scale(1.02);
+        }
+
+        .drop-zone-batch h3 {
+            color: #4ecdc4;
+            margin-bottom: 10px;
+            font-size: 1.5rem;
+        }
+
+        .drop-zone-batch p {
+            color: #888;
+        }
+
+        .crop-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .crop-section.active {
+            display: block;
+        }
+
+        .crop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .crop-header h2 {
+            color: #4ecdc4;
+            margin: 0;
+        }
+
+        .crop-progress {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .crop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .crop-card {
+            background: linear-gradient(135deg, #1e1e30 0%, #252540 100%);
+            border-radius: 15px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .crop-card.cropped {
+            border-color: #4ecdc4;
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.2);
+        }
+
+        .crop-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .crop-card-header h4 {
+            color: #ddd;
+            margin: 0;
+            font-size: 0.9rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+
+        .crop-status {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            padding: 4px 10px;
+            border-radius: 15px;
+        }
+
+        .crop-status.pending {
+            background: rgba(255, 165, 0, 0.2);
+            color: #ffa500;
+        }
+
+        .crop-status.done {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+        }
+
+        .crop-image-container {
+            position: relative;
+            width: 100%;
+            height: 200px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .crop-image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            display: block;
+        }
+
+        .crop-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .crop-btn {
+            flex: 1;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+        }
+
+        .crop-btn.primary {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: #1a1a2e;
+        }
+
+        .crop-btn.secondary {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ddd;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .crop-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .crop-btn.remove {
+            background: rgba(255, 71, 87, 0.2);
+            color: #ff4757;
+            border: 1px solid rgba(255, 71, 87, 0.3);
+        }
+
+        .crop-modal,
+        .zoom-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .crop-modal.active,
+        .zoom-modal.active {
+            display: flex;
+        }
+
+        .crop-modal-content {
+            background: linear-gradient(135deg, #1e1e30 0%, #252540 100%);
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow: auto;
+        }
+
+        .crop-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .crop-modal-header h3 {
+            color: #4ecdc4;
+            margin: 0;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: color 0.3s;
+        }
+
+        .close-modal:hover {
+            color: #ff4757;
+        }
+
+        .cropper-container-wrapper {
+            width: 100%;
+            height: 500px;
+            background: #1a1a2e;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .cropper-container-wrapper img {
+            max-width: 100%;
+        }
+
+        .crop-modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .modal-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn.confirm {
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: #1a1a2e;
+        }
+
+        .modal-btn.cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ddd;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .zone-config {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .config-item label {
+            display: block;
+            color: #aaa;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .config-item input,
+        .config-item select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #444;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #fff;
+            font-size: 1rem;
+        }
+
+        .process-btn {
+            width: 100%;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .process-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(78, 205, 196, 0.4);
+        }
+
+        .process-btn:disabled {
+            background: #555;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .progress-section {
+            margin-top: 20px;
+            display: none;
+        }
+
+        .progress-bar-container {
+            background: #1a1a2e;
+            border-radius: 10px;
+            overflow: hidden;
+            height: 30px;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4ecdc4, #00ff88);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1a1a2e;
+            font-weight: bold;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #1e1e30 0%, #252540 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(78, 205, 196, 0.3);
+        }
+
+        .summary-card h2 {
+            color: #4ecdc4;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .chart-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .chart-controls label {
+            color: #aaa;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chart-controls input,
+        .chart-controls select {
+            padding: 8px 12px;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #1a1a2e;
+            color: #fff;
+            width: 80px;
+        }
+
+        .chart-controls select {
+            width: auto;
+        }
+
+        .chart-controls .apply-btn {
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #4ecdc4 0%, #44a08d 100%);
+            color: #1a1a2e;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .chart-wrapper {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: box-shadow 0.3s;
+            position: relative;
+        }
+
+        .chart-wrapper:hover {
+            box-shadow: 0 0 20px rgba(78, 205, 196, 0.3);
+        }
+
+        .chart-wrapper::after {
+            content: '🔍 Click to enlarge';
+            position: absolute;
+            bottom: 10px;
+            right: 15px;
+            font-size: 0.75rem;
+            color: #888;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .chart-wrapper:hover::after {
+            opacity: 1;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: rgba(78, 205, 196, 0.1);
+            border: 1px solid rgba(78, 205, 196, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-box .label {
+            color: #888;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .value {
+            color: #4ecdc4;
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+
+        .individual-results {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+        }
+
+        .individual-card {
+            background: linear-gradient(135deg, #1e1e30 0%, #252540 100%);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .individual-card h3 {
+            color: #ddd;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .individual-chart-container {
+            background: #fff;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            transition: box-shadow 0.3s;
+            position: relative;
+        }
+
+        .individual-chart-container:hover {
+            box-shadow: 0 0 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .individual-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .mini-stat {
+            text-align: center;
+        }
+
+        .mini-stat .zone-label {
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .mini-stat .zone-value {
+            font-size: 1.1rem;
+            color: #4ecdc4;
+            font-weight: bold;
+        }
+
+        .data-table-section {
+            background: linear-gradient(135deg, #1e1e30 0%, #252540 100%);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow-x: auto;
+        }
+
+        .data-table-section h2 {
+            color: #4ecdc4;
+            margin-bottom: 20px;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+
+        .data-table th {
+            background: rgba(78, 205, 196, 0.2);
+            color: #4ecdc4;
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 2px solid #4ecdc4;
+        }
+
+        .data-table td {
+            padding: 10px 15px;
+            color: #ddd;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .data-table tr:hover td {
+            background: rgba(78, 205, 196, 0.05);
+        }
+
+        .data-table .mean-row {
+            background: rgba(78, 205, 196, 0.15);
+            font-weight: bold;
+        }
+
+        .data-table .std-row {
+            background: rgba(255, 165, 0, 0.15);
+            font-style: italic;
+        }
+
+        .download-btns {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .download-btn {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .legend-scale {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .legend-scale span {
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        .legend-gradient {
+            width: 150px;
+            height: 20px;
+            background: linear-gradient(90deg, #4CAF50, #FFEB3B, #FF9800, #f44336);
+            border-radius: 4px;
+        }
+
+        .preview-thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+
+        .zoom-modal-content {
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 95vw;
+            max-height: 95vh;
+            overflow: auto;
+            position: relative;
+        }
+
+        .zoom-modal-content canvas {
+            max-width: 100%;
+        }
+
+        .zoom-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: #ff4757;
+            color: white;
+            border: none;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1.2rem;
+            z-index: 10;
+        }
+
+        .color-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        .color-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .color-legend-item .swatch {
+            width: 20px;
+            height: 3px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="batch-container">
+        <a href="/" class="nav-link">← Back to Single Image Analysis</a>
+        <div class="batch-header">
+            <h1>📊 Batch Analysis Mode</h1>
+            <p>Upload multiple PLM images, crop regions of interest, then analyze together</p>
+        </div>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="drop-zone-batch" id="dropZone">
+                <h3>📁 Drop Multiple Images Here</h3>
+                <p>or click to select files (PNG, JPG, JPEG)</p>
+                <input type="file" id="fileInput" multiple accept="image/*" style="display: none;">
+            </div>
+            <div class="crop-section" id="cropSection">
+                <div class="crop-header">
+                    <h2><i class="fa-solid fa-crop"></i> Crop Regions of Interest</h2>
+                    <div class="crop-progress"><span id="croppedCount">0</span> / <span id="totalCount">0</span> images
+                        cropped</div>
+                </div>
+                <p style="color: #888; margin-bottom: 20px;">Click "Crop" on each image. Ensure the Superficial Zone is
+                    at the top.</p>
+                <div class="crop-grid" id="cropGrid"></div>
+            </div>
+            <div class="zone-config" id="zoneConfig" style="display: none;">
+                <div class="config-item"><label>SZ Boundary (%)</label><input type="number" id="szBoundary" value="33"
+                        min="1" max="99"></div>
+                <div class="config-item"><label>MZ Boundary (%)</label><input type="number" id="mzBoundary" value="66"
+                        min="1" max="99"></div>
+                <div class="config-item"><label>Use AI Detection</label><select id="useAi">
+                        <option value="false">Manual Boundaries</option>
+                        <option value="true">AI Auto-Detect</option>
+                    </select></div>
+            </div>
+            <button class="process-btn" id="processBtn" disabled>🔬 Process All Images</button>
+            <div class="progress-section" id="progressSection">
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progressBar">0%</div>
+                </div>
+                <p style="color:#888; text-align:center; margin-top:10px;" id="progressText">Processing...</p>
+            </div>
+        </div>
+
+        <!-- Crop Modal -->
+        <div class="crop-modal" id="cropModal">
+            <div class="crop-modal-content">
+                <div class="crop-modal-header">
+                    <h3><i class="fa-solid fa-crop-simple"></i> Crop: <span id="cropModalFilename"></span></h3>
+                    <button class="close-modal" id="closeCropModal">&times;</button>
+                </div>
+                <p style="color: #888; margin-bottom: 15px;">Select the region. Superficial Zone must be at top.</p>
+                <div class="cropper-container-wrapper"><img id="cropModalImage" src="" alt="Crop"></div>
+                <div class="crop-modal-actions">
+                    <button class="modal-btn cancel" id="cancelCrop">Cancel</button>
+                    <button class="modal-btn confirm" id="confirmCrop"><i class="fa-solid fa-check"></i>
+                        Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zoom Modal -->
+        <div class="zoom-modal" id="zoomModal">
+            <div class="zoom-modal-content" id="zoomModalContent">
+                <button class="zoom-close" id="zoomClose">&times;</button>
+                <canvas id="zoomChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="results-section" id="resultsSection">
+            <!-- Combined Mean Chart -->
+            <div class="summary-card">
+                <h2>📈 Combined Depth Profile (Mean ± Std Dev)</h2>
+                <div class="chart-controls">
+                    <label>Width: <input type="number" id="combinedWidth" value="100" min="50" max="200">%</label>
+                    <label>Height: <input type="number" id="combinedHeight" value="400" min="200" max="800"
+                            step="50">px</label>
+                    <button class="apply-btn" onclick="resizeCombinedChart()">Apply</button>
+                </div>
+                <div class="legend-scale"><span>90° (Vertical)</span>
+                    <div class="legend-gradient"></div><span>0° (Horizontal)</span>
+                </div>
+                <div class="chart-wrapper" id="combinedChartWrapper" style="height: 400px;"
+                    onclick="zoomChart('combined')">
+                    <canvas id="combinedChart"></canvas>
+                </div>
+                <div class="stats-grid" id="summaryStats"></div>
+            </div>
+
+            <!-- Overlay Comparison Chart -->
+            <div class="summary-card">
+                <h2>🔀 Overlay Comparison (All Profiles)</h2>
+                <div class="chart-controls">
+                    <label>Width: <input type="number" id="overlayWidth" value="100" min="50" max="200">%</label>
+                    <label>Height: <input type="number" id="overlayHeight" value="450" min="200" max="800"
+                            step="50">px</label>
+                    <button class="apply-btn" onclick="resizeOverlayChart()">Apply</button>
+                </div>
+                <div class="chart-wrapper" id="overlayChartWrapper" style="height: 450px;"
+                    onclick="zoomChart('overlay')">
+                    <canvas id="overlayChart"></canvas>
+                </div>
+                <div class="color-legend" id="overlayLegend"></div>
+            </div>
+
+            <!-- Individual Charts -->
+            <div class="summary-card">
+                <h2>🖼️ Individual Image Profiles</h2>
+                <div class="chart-controls">
+                    <label>Card Width: <input type="number" id="individualWidth" value="100" min="300" max="1500"
+                            step="50">px</label>
+                    <label>Card Height: <input type="number" id="individualHeight" value="220" min="150" max="600"
+                            step="25">px</label>
+                    <button class="apply-btn" onclick="resizeIndividualCharts()">Apply</button>
+                </div>
+                <div class="individual-results" id="individualResults"></div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="data-table-section">
+                <h2>📋 Detailed Data Table</h2>
+                <table class="data-table" id="dataTable">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>SZ Mean (°)</th>
+                            <th>SZ Std</th>
+                            <th>MZ Mean (°)</th>
+                            <th>MZ Std</th>
+                            <th>DZ Mean (°)</th>
+                            <th>DZ Std</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+                <div class="download-btns">
+                    <button class="download-btn" id="downloadExcel">📥 Download Excel</button>
+                    <button class="download-btn" id="downloadCSV">📥 Download CSV</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let imageDataList = [], allResults = [], combinedChartInstance = null, overlayChartInstance = null, individualCharts = {}, currentCropper = null, currentCropIndex = -1, zoomChartInstance = null;
+        const COLORS = ['#e6194b', '#3cb44b', '#ffe119', '#4363d8', '#f58231', '#911eb4', '#46f0f0', '#f032e6', '#bcf60c', '#fabebe', '#008080', '#e6beff'];
+
+        const dropZone = document.getElementById('dropZone'), fileInput = document.getElementById('fileInput'), cropSection = document.getElementById('cropSection'), cropGrid = document.getElementById('cropGrid'), zoneConfig = document.getElementById('zoneConfig'), processBtn = document.getElementById('processBtn'), progressSection = document.getElementById('progressSection'), progressBar = document.getElementById('progressBar'), progressText = document.getElementById('progressText'), resultsSection = document.getElementById('resultsSection'), cropModal = document.getElementById('cropModal'), cropModalImage = document.getElementById('cropModalImage'), cropModalFilename = document.getElementById('cropModalFilename'), zoomModal = document.getElementById('zoomModal');
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+        fileInput.addEventListener('change', e => handleFiles(e.target.files));
+
+        function handleFiles(files) {
+            Array.from(files).filter(f => f.type.startsWith('image/')).forEach(file => {
+                if (!imageDataList.find(d => d.file.name === file.name && d.file.size === file.size)) {
+                    const reader = new FileReader();
+                    reader.onload = e => { imageDataList.push({ file, originalDataUrl: e.target.result, croppedDataUrl: null, cropped: false }); updateCropGrid(); };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        function updateCropGrid() {
+            cropGrid.innerHTML = '';
+            if (imageDataList.length === 0) { cropSection.classList.remove('active'); zoneConfig.style.display = 'none'; processBtn.disabled = true; return; }
+            cropSection.classList.add('active'); zoneConfig.style.display = 'grid';
+            document.getElementById('totalCount').textContent = imageDataList.length;
+            document.getElementById('croppedCount').textContent = imageDataList.filter(d => d.cropped).length;
+            imageDataList.forEach((imgData, i) => {
+                const card = document.createElement('div');
+                card.className = `crop-card ${imgData.cropped ? 'cropped' : ''}`;
+                card.innerHTML = `<div class="crop-card-header"><h4 title="${imgData.file.name}">${imgData.file.name}</h4><div class="crop-status ${imgData.cropped ? 'done' : 'pending'}"><i class="fa-solid ${imgData.cropped ? 'fa-check' : 'fa-clock'}"></i> ${imgData.cropped ? 'Cropped' : 'Pending'}</div></div><div class="crop-image-container"><img src="${imgData.croppedDataUrl || imgData.originalDataUrl}" class="preview-thumb" alt="Preview"></div><div class="crop-card-actions"><button class="crop-btn primary" onclick="openCropModal(${i})"><i class="fa-solid fa-crop-simple"></i> ${imgData.cropped ? 'Re-crop' : 'Crop'}</button><button class="crop-btn secondary" onclick="useFullImage(${i})"><i class="fa-solid fa-expand"></i> Full</button><button class="crop-btn remove" onclick="removeImage(${i})"><i class="fa-solid fa-trash"></i></button></div>`;
+                cropGrid.appendChild(card);
+            });
+            updateProcessButton();
+        }
+
+        function updateProcessButton() {
+            const allCropped = imageDataList.length > 0 && imageDataList.every(d => d.cropped);
+            processBtn.disabled = !allCropped;
+            processBtn.innerHTML = allCropped ? `🔬 Process All ${imageDataList.length} Images` : `⏳ Crop ${imageDataList.filter(d => !d.cropped).length} remaining image(s)`;
+        }
+
+        function removeImage(i) { imageDataList.splice(i, 1); updateCropGrid(); }
+        function useFullImage(i) { imageDataList[i].croppedDataUrl = imageDataList[i].originalDataUrl; imageDataList[i].cropped = true; updateCropGrid(); }
+
+        function openCropModal(i) {
+            currentCropIndex = i; cropModalFilename.textContent = imageDataList[i].file.name; cropModalImage.src = imageDataList[i].originalDataUrl; cropModal.classList.add('active');
+            setTimeout(() => { if (currentCropper) currentCropper.destroy(); currentCropper = new Cropper(cropModalImage, { viewMode: 1, dragMode: 'move', aspectRatio: NaN, autoCropArea: 0.8, restore: false, guides: true, center: true, highlight: false, cropBoxMovable: true, cropBoxResizable: true, toggleDragModeOnDblclick: false }); }, 100);
+        }
+
+        function closeCropModal() { cropModal.classList.remove('active'); if (currentCropper) { currentCropper.destroy(); currentCropper = null; } currentCropIndex = -1; }
+        document.getElementById('closeCropModal').addEventListener('click', closeCropModal);
+        document.getElementById('cancelCrop').addEventListener('click', closeCropModal);
+        document.getElementById('confirmCrop').addEventListener('click', () => { if (currentCropper && currentCropIndex >= 0) { const canvas = currentCropper.getCroppedCanvas(); if (canvas) { imageDataList[currentCropIndex].croppedDataUrl = canvas.toDataURL('image/png'); imageDataList[currentCropIndex].cropped = true; updateCropGrid(); } } closeCropModal(); });
+        cropModal.addEventListener('click', e => { if (e.target === cropModal) closeCropModal(); });
+
+        processBtn.addEventListener('click', async () => {
+            if (imageDataList.length === 0 || !imageDataList.every(d => d.cropped)) return;
+            allResults = []; progressSection.style.display = 'block'; resultsSection.style.display = 'none'; processBtn.disabled = true;
+            const szB = document.getElementById('szBoundary').value, mzB = document.getElementById('mzBoundary').value, useAi = document.getElementById('useAi').value === 'true';
+            for (let i = 0; i < imageDataList.length; i++) {
+                progressText.textContent = `Processing ${imageDataList[i].file.name} (${i + 1}/${imageDataList.length})...`;
+                progressBar.style.width = `${(i / imageDataList.length) * 100}%`; progressBar.textContent = `${Math.round((i / imageDataList.length) * 100)}%`;
+                try { const r = await fetch('/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: imageDataList[i].croppedDataUrl, sz_boundary: szB, mz_boundary: mzB, use_ai: useAi }) }).then(res => res.json()); if (r.success) { r.filename = imageDataList[i].file.name; allResults.push(r); } else { allResults.push({ filename: imageDataList[i].file.name, error: r.error }); } } catch (err) { allResults.push({ filename: imageDataList[i].file.name, error: err.message }); }
+            }
+            progressBar.style.width = '100%'; progressBar.textContent = '100%'; progressText.textContent = 'Complete!';
+            setTimeout(() => { progressSection.style.display = 'none'; displayResults(); processBtn.disabled = false; }, 500);
+        });
+
+        function displayResults() {
+            resultsSection.style.display = 'block';
+            const successfulResults = allResults.filter(r => !r.error);
+            if (successfulResults.length === 0) { resultsSection.innerHTML = '<p style="color:#ff6b6b;">No images processed successfully.</p>'; return; }
+            displayCombinedChart(successfulResults); displayOverlayChart(successfulResults); displaySummaryStats(successfulResults); displayIndividualCharts(successfulResults); displayDataTable(successfulResults);
+        }
+
+        function displayCombinedChart(results) {
+            const ctx = document.getElementById('combinedChart').getContext('2d');
+            if (combinedChartInstance) combinedChartInstance.destroy();
+            const bins = 100, allProfiles = results.map(r => { const p = new Array(bins).fill(null); r.depth_profile.forEach(dp => { const idx = Math.round(dp.thickness * (bins - 1)); if (idx >= 0 && idx < bins && dp.angle !== null) p[idx] = dp.angle; }); return p; });
+            const meanProfile = [], stdProfile = [], labels = [];
+            for (let i = 0; i < bins; i++) { labels.push((i / (bins - 1)).toFixed(2)); const vals = allProfiles.map(p => p[i]).filter(v => v !== null); if (vals.length > 0) { const m = vals.reduce((a, b) => a + b, 0) / vals.length; meanProfile.push(m); stdProfile.push(Math.sqrt(vals.reduce((a, b) => a + Math.pow(b - m, 2), 0) / vals.length)); } else { meanProfile.push(null); stdProfile.push(0); } }
+            combinedChartInstance = new Chart(ctx, { type: 'line', data: { labels, datasets: [{ label: 'Mean Angle', data: meanProfile, borderColor: '#2196F3', borderWidth: 3, fill: false, tension: 0.3, pointRadius: 0, spanGaps: true }, { label: '+Std', data: meanProfile.map((m, i) => m !== null ? m + stdProfile[i] : null), borderColor: 'rgba(33,150,243,0.3)', borderWidth: 1, borderDash: [5, 5], fill: false, pointRadius: 0, spanGaps: true }, { label: '-Std', data: meanProfile.map((m, i) => m !== null ? m - stdProfile[i] : null), borderColor: 'rgba(33,150,243,0.3)', borderWidth: 1, borderDash: [5, 5], fill: '-1', backgroundColor: 'rgba(33,150,243,0.15)', pointRadius: 0, spanGaps: true }] }, options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { title: { display: true, text: 'Fiber Angle (°)' }, min: 0, max: 90 }, y: { title: { display: true, text: 'Normalized Thickness' }, reverse: false } }, plugins: { legend: { position: 'top' }, title: { display: true, text: `Combined (n=${results.length})` } } } });
+        }
+
+        function displayOverlayChart(results) {
+            const ctx = document.getElementById('overlayChart').getContext('2d');
+            if (overlayChartInstance) overlayChartInstance.destroy();
+            const bins = 100, datasets = [], legendHtml = [];
+            results.forEach((r, idx) => {
+                const profile = new Array(bins).fill(null); r.depth_profile.forEach(dp => { const i = Math.round(dp.thickness * (bins - 1)); if (i >= 0 && i < bins && dp.angle !== null) profile[i] = dp.angle; });
+                const color = COLORS[idx % COLORS.length];
+                datasets.push({ label: r.filename.substring(0, 15), data: profile, borderColor: color, borderWidth: 2, fill: false, tension: 0.3, pointRadius: 0, spanGaps: true });
+                legendHtml.push(`<div class="color-legend-item"><div class="swatch" style="background:${color}"></div>${r.filename.substring(0, 20)}</div>`);
+            });
+            document.getElementById('overlayLegend').innerHTML = legendHtml.join('');
+            const labels = []; for (let i = 0; i < bins; i++) labels.push((i / (bins - 1)).toFixed(2));
+            overlayChartInstance = new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { title: { display: true, text: 'Fiber Angle (°)' }, min: 0, max: 90 }, y: { title: { display: true, text: 'Normalized Thickness' }, reverse: false } }, plugins: { legend: { display: false }, title: { display: true, text: 'All Profiles Overlaid' } } } });
+        }
+
+        function displaySummaryStats(results) {
+            const calc = arr => { const m = arr.reduce((a, b) => a + b, 0) / arr.length; return { mean: m.toFixed(1), std: Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - m, 2), 0) / arr.length).toFixed(1) }; };
+            const sz = calc(results.map(r => r.results.SZ.mean_angle)), mz = calc(results.map(r => r.results.MZ.mean_angle)), dz = calc(results.map(r => r.results.DZ.mean_angle));
+            document.getElementById('summaryStats').innerHTML = `<div class="stat-box"><div class="label">Images</div><div class="value">${results.length}</div></div><div class="stat-box"><div class="label">SZ Mean±Std</div><div class="value">${sz.mean}°±${sz.std}°</div></div><div class="stat-box"><div class="label">MZ Mean±Std</div><div class="value">${mz.mean}°±${mz.std}°</div></div><div class="stat-box"><div class="label">DZ Mean±Std</div><div class="value">${dz.mean}°±${dz.std}°</div></div>`;
+        }
+
+        function displayIndividualCharts(results) {
+            const container = document.getElementById('individualResults'); container.innerHTML = '';
+            Object.values(individualCharts).forEach(c => c.destroy()); individualCharts = {};
+            const h = parseInt(document.getElementById('individualHeight').value) || 220;
+            const w = document.getElementById('individualWidth').value === '100' ? 'auto' : (parseInt(document.getElementById('individualWidth').value) || 'auto');
+
+            // Adjust grid if a fixed width is set
+            if (w !== 'auto') {
+                container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(' + w + 'px, 1fr))';
+            }
+
+            results.forEach((r, idx) => {
+                // Use the annotated image URL from the server response
+                const imgSrc = r.annotated_image_url || '';
+                const cardId = `ind-chart-${idx}`, card = document.createElement('div');
+                card.className = 'individual-card';
+                card.innerHTML = `
+                    <h3 style="margin-bottom:10px;">📷 ${r.filename}</h3>
+                    <div class="individual-content" style="display:flex; gap:15px; align-items:stretch; margin-bottom:10px;">
+                        <div class="individual-img-wrapper" style="flex: 0 0 100px; width:100px; display:flex; align-items:center; justify-content:center; background:#000; border-radius:8px; overflow:hidden; border:1px solid rgba(255,255,255,0.1);">
+                            <img src="${imgSrc}" style="width:100%; height:auto; max-height: ${h}px; display:block; object-fit:contain;">
+                        </div>
+                        <div class="individual-chart-container" style="flex:1; height:${h}px; cursor:pointer;" onclick="zoomChart('individual', ${idx})">
+                            <canvas id="${cardId}"></canvas>
+                        </div>
+                    </div>
+                    <div class="individual-stats">
+                        <div class="mini-stat"><div class="zone-label">SZ</div><div class="zone-value">${r.results.SZ.mean_angle.toFixed(1)}°</div></div>
+                        <div class="mini-stat"><div class="zone-label">MZ</div><div class="zone-value">${r.results.MZ.mean_angle.toFixed(1)}°</div></div>
+                        <div class="mini-stat"><div class="zone-label">DZ</div><div class="zone-value">${r.results.DZ.mean_angle.toFixed(1)}°</div></div>
+                    </div>
+                `;
+                container.appendChild(card);
+                setTimeout(() => {
+                    const ctx = document.getElementById(cardId).getContext('2d');
+                    individualCharts[cardId] = new Chart(ctx, { type: 'line', data: { labels: r.depth_profile.map(d => d.thickness), datasets: [{ label: 'Angle', data: r.depth_profile.map(d => d.angle), borderColor: COLORS[idx % COLORS.length], borderWidth: 2, fill: true, backgroundColor: COLORS[idx % COLORS.length] + '20', tension: 0.3, pointRadius: 0, spanGaps: true }] }, options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { min: 0, max: 90 }, y: { reverse: false } }, plugins: { legend: { display: false } } } });
+                }, 50);
+            });
+        }
+
+        function displayDataTable(results) {
+            const tbody = document.getElementById('tableBody'); tbody.innerHTML = '';
+            results.forEach(r => { const row = document.createElement('tr'); row.innerHTML = `<td>${r.filename}</td><td>${r.results.SZ.mean_angle.toFixed(2)}</td><td>${r.results.SZ.std_angle.toFixed(2)}</td><td>${r.results.MZ.mean_angle.toFixed(2)}</td><td>${r.results.MZ.std_angle.toFixed(2)}</td><td>${r.results.DZ.mean_angle.toFixed(2)}</td><td>${r.results.DZ.std_angle.toFixed(2)}</td>`; tbody.appendChild(row); });
+            const calcM = arr => (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(2), calcS = arr => { const m = arr.reduce((a, b) => a + b, 0) / arr.length; return Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - m, 2), 0) / arr.length).toFixed(2); };
+            const szM = results.map(r => r.results.SZ.mean_angle), mzM = results.map(r => r.results.MZ.mean_angle), dzM = results.map(r => r.results.DZ.mean_angle);
+            const meanRow = document.createElement('tr'); meanRow.className = 'mean-row'; meanRow.innerHTML = `<td><strong>MEAN</strong></td><td>${calcM(szM)}</td><td>-</td><td>${calcM(mzM)}</td><td>-</td><td>${calcM(dzM)}</td><td>-</td>`; tbody.appendChild(meanRow);
+            const stdRow = document.createElement('tr'); stdRow.className = 'std-row'; stdRow.innerHTML = `<td><em>STD DEV</em></td><td>${calcS(szM)}</td><td>-</td><td>${calcS(mzM)}</td><td>-</td><td>${calcS(dzM)}</td><td>-</td>`; tbody.appendChild(stdRow);
+        }
+
+        function resizeCombinedChart() { const w = document.getElementById('combinedWidth').value, h = document.getElementById('combinedHeight').value; document.getElementById('combinedChartWrapper').style.width = w + '%'; document.getElementById('combinedChartWrapper').style.height = h + 'px'; if (combinedChartInstance) combinedChartInstance.resize(); }
+        function resizeOverlayChart() { const w = document.getElementById('overlayWidth').value, h = document.getElementById('overlayHeight').value; document.getElementById('overlayChartWrapper').style.width = w + '%'; document.getElementById('overlayChartWrapper').style.height = h + 'px'; if (overlayChartInstance) overlayChartInstance.resize(); }
+        function resizeIndividualCharts() {
+            const h = document.getElementById('individualHeight').value;
+            const wVal = document.getElementById('individualWidth').value;
+            const w = wVal === '100' ? 'auto' : (parseInt(wVal) || 'auto');
+
+            const container = document.getElementById('individualResults');
+            if (w !== 'auto') {
+                container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(' + w + 'px, 1fr))';
+            } else {
+                container.style.gridTemplateColumns = 'repeat(auto-fit, minmax(350px, 1fr))';
+            }
+
+            document.querySelectorAll('.individual-chart-container').forEach(el => { el.style.height = h + 'px'; });
+            document.querySelectorAll('.individual-img-wrapper img').forEach(el => { el.style.maxHeight = h + 'px'; });
+            Object.values(individualCharts).forEach(c => c.resize());
+        }
+
+        function zoomChart(type, index) {
+            zoomModal.classList.add('active');
+            const zoomCanvas = document.getElementById('zoomChart'), ctx = zoomCanvas.getContext('2d');
+            document.getElementById('zoomModalContent').style.width = '90vw'; document.getElementById('zoomModalContent').style.height = '85vh';
+            zoomCanvas.style.width = '100%'; zoomCanvas.style.height = 'calc(100% - 50px)';
+            if (zoomChartInstance) zoomChartInstance.destroy();
+            const successfulResults = allResults.filter(r => !r.error), bins = 100;
+            let config;
+            if (type === 'combined') { config = JSON.parse(JSON.stringify(combinedChartInstance.config)); }
+            else if (type === 'overlay') { config = JSON.parse(JSON.stringify(overlayChartInstance.config)); }
+            else if (type === 'individual' && index !== undefined) { const r = successfulResults[index]; config = { type: 'line', data: { labels: r.depth_profile.map(d => d.thickness), datasets: [{ label: r.filename, data: r.depth_profile.map(d => d.angle), borderColor: COLORS[index % COLORS.length], borderWidth: 3, fill: true, backgroundColor: COLORS[index % COLORS.length] + '30', tension: 0.3, pointRadius: 1, spanGaps: true }] }, options: { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { min: 0, max: 90, title: { display: true, text: 'Fiber Angle (°)', font: { size: 16 } } }, y: { reverse: false, title: { display: true, text: 'Normalized Thickness', font: { size: 16 } } } }, plugins: { legend: { display: true }, title: { display: true, text: r.filename, font: { size: 18 } } } } }; }
+            config.options.maintainAspectRatio = false;
+            setTimeout(() => { zoomChartInstance = new Chart(ctx, config); }, 100);
+        }
+
+        document.getElementById('zoomClose').addEventListener('click', () => { zoomModal.classList.remove('active'); if (zoomChartInstance) { zoomChartInstance.destroy(); zoomChartInstance = null; } });
+        zoomModal.addEventListener('click', e => { if (e.target === zoomModal) { zoomModal.classList.remove('active'); if (zoomChartInstance) { zoomChartInstance.destroy(); zoomChartInstance = null; } } });
+
+        document.getElementById('downloadExcel').addEventListener('click', async () => { const r = allResults.filter(r => !r.error); if (r.length === 0) return; try { const res = await fetch('/batch_download_excel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ results: r }) }); if (res.ok) { const blob = await res.blob(), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'batch_analysis_results.xlsx'; a.click(); URL.revokeObjectURL(url); } } catch (e) { alert('Download failed'); } });
+        document.getElementById('downloadCSV').addEventListener('click', () => { const r = allResults.filter(r => !r.error); if (r.length === 0) return; let csv = 'Image,SZ Mean,SZ Std,MZ Mean,MZ Std,DZ Mean,DZ Std\n'; r.forEach(x => csv += `${x.filename},${x.results.SZ.mean_angle.toFixed(2)},${x.results.SZ.std_angle.toFixed(2)},${x.results.MZ.mean_angle.toFixed(2)},${x.results.MZ.std_angle.toFixed(2)},${x.results.DZ.mean_angle.toFixed(2)},${x.results.DZ.std_angle.toFixed(2)}\n`); const blob = new Blob([csv], { type: 'text/csv' }), url = URL.createObjectURL(blob), a = document.createElement('a'); a.href = url; a.download = 'batch_analysis_results.csv'; a.click(); URL.revokeObjectURL(url); });
+    </script>
+</body>
+
+</html>

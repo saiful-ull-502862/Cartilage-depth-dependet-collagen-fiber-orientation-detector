@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Scientific Plotter</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Plotly -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+
+    <!-- JQuery & UI for Resizable/Draggable -->
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <div class="brand">
+                <i class="fa-solid fa-chart-line"></i> Plotter<span class="light">Pro</span>
+            </div>
+
+            <div class="control-group">
+                <h3><i class="fa-solid fa-upload"></i> Data Source</h3>
+                <div class="file-upload-box" id="drop-zone">
+                    <p>Drag Excel Files Here</p>
+                    <input type="file" id="file-input" multiple accept=".xlsx" hidden>
+                    <button class="btn-sm" onclick="document.getElementById('file-input').click()">Browse</button>
+                </div>
+                <div id="file-list" class="file-list"></div>
+            </div>
+
+            <div class="control-group scrollable-controls">
+                <h3><i class="fa-solid fa-paintbrush"></i> Appearance</h3>
+
+                <!-- General -->
+                <div class="setting-item">
+                    <label>Plot Title</label>
+                    <input type="text" id="plot-title" value="Fiber Orientation Depth Profile">
+                    <div class="color-picker-row">
+                        <input type="color" id="title-color" value="#e0e0e0">
+                    </div>
+                </div>
+
+                <!-- Axes -->
+                <div class="setting-item">
+                    <label>X-Axis Label</label>
+                    <input type="text" id="x-label" value="Fiber Angle (Degrees)">
+                </div>
+                <div class="setting-item">
+                    <label>Y-Axis Label</label>
+                    <input type="text" id="y-label" value="Normalized Depth">
+                </div>
+
+                <!-- Legend Control -->
+                <div class="setting-item">
+                    <label><i class="fa-solid fa-list"></i> Legend Position</label>
+                    <div class="flex-row">
+                        <input type="number" id="legend-x" value="0.8" step="0.05" class="half"
+                            title="X Position (0-1)">
+                        <input type="number" id="legend-y" value="0.95" step="0.05" class="half"
+                            title="Y Position (0-1)">
+                    </div>
+                    <div class="color-picker-row">
+                        <label>Bg:</label> <input type="color" id="legend-bg" value="#000000">
+                        <label>Text:</label> <input type="color" id="legend-text" value="#e0e0e0">
+                    </div>
+                </div>
+
+                <!-- Series Styling (Dynamic) -->
+                <div id="series-styles">
+                    <!-- Populated by JS -->
+                </div>
+
+                <h3 style="margin-top:20px;"><i class="fa-solid fa-ruler-combined"></i> Dimensions</h3>
+                <div class="setting-item">
+                    <label>Manual Graph Resize (or Drag handle)</label>
+                    <div class="flex-row">
+                        <input type="number" id="graph-w" value="800" class="half" placeholder="W">
+                        <input type="number" id="graph-h" value="600" class="half" placeholder="H">
+                    </div>
+                    <button class="btn-sm full-width" id="btn-resize">Apply Size</button>
+                </div>
+
+                <button class="btn-primary full-width" id="btn-update-plot" style="margin-top:20px;">Update
+                    Plot</button>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <div class="canvas-wrapper">
+                <!-- Resizable Container -->
+                <div id="resizable-plot-container" class="resizable-box">
+                    <div id="plot-area" style="width:100%; height:100%;">
+                        <div class="placeholder-text">Upload data to generate plot</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <button class="btn-tool" id="btn-download-png"><i class="fa-solid fa-camera"></i> Save PNG</button>
+                <button class="btn-tool" id="btn-download-svg"><i class="fa-solid fa-vector-square"></i> Save
+                    SVG</button>
+            </div>
+        </main>
+    </div>
+
+    <script src="/static/js/script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,17 @@
+__pycache__
+*.pyc
+.DS_Store
+.venv
+Results/
+Images/
+*.tif
+*.bmp
+*.jpg
+!Sample_Data/
+!Sample_Data/*.bmp
+!Sample_Data/*.jpg
+!Sample_Data/*.tif
+*.xlsx
+!Sample_Data/*.xlsx
+*.pptx
+!cartilage_analysis_app/Cartilage_Methodology_Workflow.pptx

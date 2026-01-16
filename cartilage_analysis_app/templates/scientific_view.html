@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scientific HSV Visualization - Cartilage Analysis</title>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Cropper.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .visualization-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .vis-card {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        .vis-card img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #eee;
+        }
+
+        .vis-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+
+        .histogram-container {
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Workflow specific */
+        .color-bar {
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            background: linear-gradient(to right, #00FF00, #FFFF00, #FF0000);
+            /* Approx Green to Red */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bg-gradient"></div>
+
+    <div class="container">
+        <header>
+            <h1><i class="fa-solid fa-flask" style="color: var(--accent);"></i> Scientific <span class="light">HSV
+                    Visualization</span></h1>
+            <p>Define ROI, Select Zones, and Visualize Algorithm Internals</p>
+            <div style="display:flex; gap:15px; justify-content:center; margin-top:15px;">
+                <a href="/" class="batch-link"
+                    style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 10px 20px; border-radius: 8px; color: white; text-decoration: none;">
+                    <i class="fa-solid fa-home"></i> Home
+                </a>
+            </div>
+        </header>
+
+        <!-- 1. Upload Raw Image -->
+        <div id="upload-section" class="glass-panel">
+            <div class="upload-box" onclick="document.getElementById('file-input').click()" style="cursor: pointer;">
+                <i class="fa-solid fa-cloud-arrow-up icon-large"></i>
+                <h2>1. Upload Raw Image</h2>
+                <p>Click to browse raw PLM image</p>
+                <input type="file" id="file-input" accept="image/*" hidden onchange="handleFile(this)">
+            </div>
+        </div>
+
+        <!-- 2. ROI Crop Selection -->
+        <div id="editor-section" class="glass-panel hidden">
+            <div class="editor-header">
+                <h2>2. Select Region of Interest (ROI)</h2>
+                <p>Crop the cartilage sample to exclude background/bone.</p>
+                <div class="controls">
+                    <button class="btn-secondary" onclick="resetCrop()"><i class="fa-solid fa-rotate-right"></i>
+                        Reset</button>
+                    <button class="btn-primary" onclick="proceedToZones()">Next: Set Zones & Analyze <i
+                            class="fa-solid fa-arrow-right"></i></button>
+                </div>
+            </div>
+            <div class="img-container">
+                <img id="image-to-crop" src="" alt="Source">
+            </div>
+        </div>
+
+        <!-- 3. Zone Selection & Display -->
+        <div id="zone-section" class="glass-panel hidden">
+            <div class="editor-header">
+                <h2>3. Define Zones & Analyze ROI</h2>
+                <div class="zone-inputs" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <label>SZ %: <input type="number" id="sz-input" value="10" min="1" max="90"
+                            style="width: 50px;"></label>
+                    <label>MZ %: <input type="number" id="mz-input" value="20" min="1" max="90"
+                            style="width: 50px;"></label>
+                    <label>DZ %: <span id="dz-display"
+                            style="color: var(--accent); font-weight: bold;">70</span></label>
+                    <button class="btn-primary" onclick="runScientificAnalysis()"><i class="fa-solid fa-microchip"></i>
+                        Generate Scientific Outputs</button>
+                </div>
+                <button class="btn-secondary" onclick="backToCrop()"><i class="fa-solid fa-arrow-left"></i> Change
+                    ROI</button>
+            </div>
+            <!-- Zone Preview Image (used for display, not interaction here for simplicity unless needed) -->
+            <div style="text-align: center; margin-top: 15px;">
+                <img id="zone-preview-img" style="max-height: 200px; border-radius: 8px; border: 1px solid #ccc;">
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loader" class="hidden" style="text-align: center; margin-top: 20px;">
+            <div class="spinner"></div>
+            <p style="color: white;">Processing ROI & Generating Scientific Visuals...</p>
+        </div>
+
+        <!-- 4. Scientific Results -->
+        <div id="results-section" class="hidden">
+            <h2 style="margin-top: 30px; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2);">4. Scientific Algorithm
+                Outputs</h2>
+
+            <div class="visualization-grid">
+                <!-- A. Hue Heatmap -->
+                <div class="vis-card">
+                    <h3>A. Hue Channel (Fiber Orientation)</h3>
+                    <img id="img-hue" src="" alt="Hue Channel">
+                    <!-- Color Bar -->
+                    <div style="margin-top: 5px;">
+                        <span style="font-size: 0.8rem;">Hue Scale (0-179)</span>
+                        <div class="color-bar"
+                            style="background: linear-gradient(to right, #0000FF, #00FFFF, #00FF00, #FFFF00, #FF0000);">
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.7rem;">
+                            <span>179 (Red)</span><span>90 (Cyan)</span><span>0 (Blue*)</span>
+                        </div>
+                        <p style="font-size: 0.7rem; color: #888;">*OpenCV HSV mapping varies, heatmap uses Jet
+                            colormap.</p>
+                    </div>
+                </div>
+
+                <!-- B. Pixel Mask -->
+                <div class="vis-card">
+                    <h3>B. Dual-Threshold Mask</h3>
+                    <img id="img-mask" src="" alt="Pixel Mask">
+                    <p style="font-size: 0.9rem; color: #666;">Black = Rejected Noise (V&lt;10 or S&lt;10)</p>
+                </div>
+
+                <!-- C. Zone Overlay (Standard) -->
+                <div class="vis-card">
+                    <h3>C. Standard Zone Overlay</h3>
+                    <img id="img-zones" src="" alt="Zones">
+                    <p style="font-size: 0.9rem; color: #666;">SZ / MZ / DZ Structure</p>
+                </div>
+            </div>
+
+            <!-- Histogram -->
+            <div class="glass-panel" style="background: white; padding: 20px; margin-top: 20px;">
+                <h3>D. Quantitative Hue Histogram (ROI)</h3>
+                <div class="histogram-container">
+                    <canvas id="hue-histogram"></canvas>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="btn-primary" onclick="downloadAll()"><i class="fa-solid fa-download"></i> Download
+                        All Images</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+    <script>
+        let cropper = null;
+        let lastAnalysisResult = null;
+
+        function handleFile(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('image-to-crop').src = e.target.result;
+                    document.getElementById('upload-section').classList.add('hidden');
+                    document.getElementById('editor-section').classList.remove('hidden');
+
+                    if (cropper) cropper.destroy();
+                    cropper = new Cropper(document.getElementById('image-to-crop'), {
+                        viewMode: 1, responsive: true
+                    });
+                };
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function resetCrop() {
+            if (cropper) cropper.destroy();
+            document.getElementById('editor-section').classList.add('hidden');
+            document.getElementById('upload-section').classList.remove('hidden');
+            document.getElementById('file-input').value = '';
+        }
+
+        function proceedToZones() {
+            if (!cropper) return;
+            const canvas = cropper.getCroppedCanvas();
+            document.getElementById('zone-preview-img').src = canvas.toDataURL('image/jpeg');
+            document.getElementById('editor-section').classList.add('hidden');
+            document.getElementById('zone-section').classList.remove('hidden');
+            updateThickness();
+        }
+
+        function backToCrop() {
+            document.getElementById('zone-section').classList.add('hidden');
+            document.getElementById('editor-section').classList.remove('hidden');
+        }
+
+        // Handling Thickness logic (simple)
+        document.getElementById('sz-input').addEventListener('change', updateThickness);
+        document.getElementById('mz-input').addEventListener('change', updateThickness);
+
+        function updateThickness() {
+            let s = parseInt(document.getElementById('sz-input').value) || 10;
+            let m = parseInt(document.getElementById('mz-input').value) || 20;
+            if (s + m >= 100) { m = 99 - s; document.getElementById('mz-input').value = m; }
+            document.getElementById('dz-display').textContent = 100 - (s + m);
+        }
+
+        async function runScientificAnalysis() {
+            document.getElementById('loader').classList.remove('hidden');
+            document.getElementById('zone-section').classList.add('hidden');
+            document.getElementById('results-section').classList.add('hidden');
+
+            const roiImage = document.getElementById('zone-preview-img').src;
+            const szPct = parseInt(document.getElementById('sz-input').value);
+            const mzPct = parseInt(document.getElementById('mz-input').value);
+
+            try {
+                const response = await fetch('/analyze_scientific', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        image: roiImage,
+                        sz_boundary: szPct,
+                        mz_boundary: szPct + mzPct
+                    })
+                });
+                const data = await response.json();
+
+                document.getElementById('loader').classList.add('hidden');
+
+                if (data.success) {
+                    lastAnalysisResult = data;
+                    displayScientificResults(data);
+                } else {
+                    alert('Error: ' + data.error);
+                    document.getElementById('zone-section').classList.remove('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Analysis failed');
+                document.getElementById('loader').classList.add('hidden');
+                document.getElementById('zone-section').classList.remove('hidden');
+            }
+        }
+
+        function displayScientificResults(data) {
+            document.getElementById('results-section').classList.remove('hidden');
+            document.getElementById('img-hue').src = data.hue_url;
+            document.getElementById('img-mask').src = data.mask_url;
+            document.getElementById('img-zones').src = data.zone_url;
+
+            // Histogram
+            let ctx = document.getElementById('hue-histogram').getContext('2d');
+
+            // If chart exists, destroy? Simple check: if canvas has content
+            if (window.histChart) window.histChart.destroy();
+
+            const histData = data.histogram;
+            const bgColors = histData.map((_, i) => `hsla(${i * 2}, 70%, 50%, 0.8)`);
+            window.histChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({ length: 180 }, (_, i) => i),
+                    datasets: [{
+                        label: 'Pixel Count',
+                        data: histData,
+                        backgroundColor: bgColors,
+                        borderWidth: 0,
+                        barPercentage: 1.0,
+                        categoryPercentage: 1.0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { title: { display: true, text: 'Hue Value (0-179)' } },
+                        y: { title: { display: true, text: 'Frequency' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function downloadAll() {
+            if (!lastAnalysisResult) return;
+            const link = document.createElement('a');
+
+            // Download Function
+            const download = (url, name) => {
+                link.href = url;
+                link.download = name;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            };
+
+            download(lastAnalysisResult.hue_url, 'scientific_hue_channel.jpg');
+            setTimeout(() => download(lastAnalysisResult.mask_url, 'scientific_mask.jpg'), 500);
+            setTimeout(() => download(lastAnalysisResult.zone_url, 'scientific_zones.jpg'), 1000);
+        }
+    </script>
+</body>
+
+</html>

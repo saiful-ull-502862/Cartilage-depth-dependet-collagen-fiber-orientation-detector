@@ -1,0 +1,10 @@
+flask
+numpy
+pandas
+opencv-python
+scikit-image
+openpyxl
+torch
+torchvision
+scikit-learn
+matplotlib
